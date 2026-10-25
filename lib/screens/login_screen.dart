@@ -4,7 +4,6 @@ import '../core/theme/app_theme.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 
-// 1. Add WidgetsBindingObserver to the State class
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -17,8 +16,9 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
+  bool _passwordVisible = false;
 
-  // 2. Add the observer when the widget is created (Launched)
+  // Observe lifecycle events (Milestone 1 requirement kept)
   @override
   void initState() {
     super.initState();
@@ -26,7 +26,6 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     print('🟢 LIFECYCLE: LoginScreen launched (initState)');
   }
 
-  // 3. Remove the observer when the widget is destroyed
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -35,19 +34,28 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // 4. Override the lifecycle state changes (Paused, Resumed, etc.)
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     print('🟡 LIFECYCLE STATE CHANGED TO: $state');
   }
 
-  // ... [Keep the _handleLogin and build methods exactly as they were] ...
   void _handleLogin() {
     if (_formKey.currentState!.validate()) {
-      // 1. Capture input (done via controllers)
-      String email = _emailController.text;
+      final email = _emailController.text.trim();
 
-      // 2. Show clear feedback & welcome message
+      // ★ M2: Pass data to the next screen via constructor (Intent/putExtra equivalent)
+      // The email is forwarded to HomeScreen which forwards it to ProfileScreen.
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomeScreen(
+            userEmail: email,
+            // Derive a display name from the email prefix
+            userName: email.split('@')[0].replaceAll('.', ' '),
+          ),
+        ),
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -55,13 +63,11 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           ),
           backgroundColor: AppColors.successGreen,
           duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
-      );
-
-      // Navigate to Home
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     }
   }
@@ -91,9 +97,17 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 20),
                   Text('SmartFinance AI', style: AppTextStyles.heading),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your AI-powered money companion',
+                    style: AppTextStyles.body.copyWith(
+                      fontSize: 14,
+                      color: Colors.white38,
+                    ),
+                  ),
                   const SizedBox(height: 40),
 
-                  // GLASSMORPHISM CARD (Stack/FrameLayout equivalent layered with Column/LinearLayout)
+                  // Glassmorphism login card
                   ClipRRect(
                     borderRadius: BorderRadius.circular(20),
                     child: BackdropFilter(
@@ -112,8 +126,17 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              Text(
+                                'Sign In',
+                                style: AppTextStyles.subHeading,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Email field
                               TextFormField(
                                 controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
                                 style: AppTextStyles.body,
                                 decoration: InputDecoration(
                                   labelText: 'Email',
@@ -123,11 +146,33 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                                     color: Colors.white70,
                                   ),
                                   enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.3,
-                                      ),
+                                      color: Colors.white.withValues(alpha: 0.3),
                                     ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primary,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorRed,
+                                    ),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorRed,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  errorStyle: const TextStyle(
+                                    color: AppColors.errorRed,
                                   ),
                                 ),
                                 validator: (value) {
@@ -136,15 +181,17 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                                   }
                                   if (!value.contains('@') ||
                                       !value.contains('.')) {
-                                    return 'Enter a valid email';
+                                    return 'Enter a valid email address';
                                   }
                                   return null;
                                 },
                               ),
                               const SizedBox(height: 16),
+
+                              // Password field with visibility toggle
                               TextFormField(
                                 controller: _passwordController,
-                                obscureText: true,
+                                obscureText: !_passwordVisible,
                                 style: AppTextStyles.body,
                                 decoration: InputDecoration(
                                   labelText: 'Password',
@@ -153,12 +200,45 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                                     Icons.lock,
                                     color: Colors.white70,
                                   ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.3,
-                                      ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _passwordVisible
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.white54,
                                     ),
+                                    onPressed: () => setState(
+                                      () => _passwordVisible = !_passwordVisible,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: Colors.white.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primary,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorRed,
+                                    ),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorRed,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  errorStyle: const TextStyle(
+                                    color: AppColors.errorRed,
                                   ),
                                 ),
                                 validator: (value) {
@@ -172,7 +252,8 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                                 },
                               ),
                               const SizedBox(height: 16),
-                              // CHOICE CONTROL: CheckBox
+
+                              // Remember me checkbox
                               Row(
                                 children: [
                                   Checkbox(
@@ -181,13 +262,11 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                                         setState(() => _rememberMe = val!),
                                     activeColor: AppColors.primary,
                                   ),
-                                  Text(
-                                    'Remember me',
-                                    style: AppTextStyles.body,
-                                  ),
+                                  Text('Remember me', style: AppTextStyles.body),
                                 ],
                               ),
                               const SizedBox(height: 24),
+
                               ElevatedButton(
                                 onPressed: _handleLogin,
                                 style: ElevatedButton.styleFrom(
@@ -199,24 +278,34 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: Text(
-                                  'Login',
-                                  style: AppTextStyles.button,
-                                ),
+                                child: Text('Login', style: AppTextStyles.button),
                               ),
                               const SizedBox(height: 16),
+
                               GestureDetector(
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        const RegisterScreen(),
+                                    builder: (context) => const RegisterScreen(),
                                   ),
                                 ),
                                 child: Center(
-                                  child: Text(
-                                    "Don't have an account? Register",
-                                    style: AppTextStyles.body,
+                                  child: RichText(
+                                    text: TextSpan(
+                                      style: AppTextStyles.body,
+                                      children: const [
+                                        TextSpan(
+                                          text: "Don't have an account? ",
+                                        ),
+                                        TextSpan(
+                                          text: 'Register',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

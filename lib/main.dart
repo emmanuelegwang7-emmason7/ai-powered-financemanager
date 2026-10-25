@@ -13,7 +13,15 @@ class SmartFinanceApp extends StatelessWidget {
     return MaterialApp(
       title: 'SmartFinance AI',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+      // Wire the app-level theme to our custom colors
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2563EB),
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
+      ),
       home: const LoginScreen(),
     );
   }
