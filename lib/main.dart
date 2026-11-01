@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
+import 'services/finance_store.dart';
 
-void main() {
+void main() async {
+  // Required when calling native code before runApp
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialise persistent store so all screens can read/write immediately
+  await FinanceStore.init();
+
   runApp(const SmartFinanceApp());
 }
 

@@ -5,10 +5,14 @@ import '../core/theme/app_theme.dart';
 import '../widgets/reusable_transaction_item.dart';
 import '../widgets/delete_confirmation_dialog.dart';
 import '../widgets/app_wide_menu.dart';
+import '../widgets/momo_balance_card.dart';
+import '../widgets/safe_to_spend_card.dart';
+import '../services/finance_store.dart';
 import 'login_screen.dart';
 import 'todays_plan_screen.dart';
 import 'transaction_history_screen.dart';
 import 'ai_advisor_screen.dart';
+import 'spending_chart_screen.dart';
 
 /// Home / Dashboard Screen — the central hub of SmartFinance AI.
 ///
@@ -42,6 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
     'Airtime',
   ];
 
+  // Refresh key — increment to force SafeToSpendCard to re-read the store
+  int _cardRefreshKey = 0;
+
+  void _refreshCard() => setState(() => _cardRefreshKey++);
+
   // ★ Dynamic collection — shared across Home and Transaction History
   List<Map<String, dynamic>> _transactions = [
     {
@@ -71,21 +80,13 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   // ★ Filter the list based on selected category
-  List<Map<String, dynamic>> get _filteredTransactions {
-    if (_selectedCategory == 'All') return _transactions;
+  List<Map<String, dynamic>> get _filteredTransactions {    if (_selectedCategory == 'All') return _transactions;
     return _transactions
         .where((tx) =>
             (tx['category'] as String? ?? '').toLowerCase() ==
             _selectedCategory.toLowerCase())
         .toList();
   }
-
-  // Computed total balance
-  int get _totalBalance =>
-      _transactions.fold(0, (sum, tx) => sum + (tx['amount'] as int));
-
-  // Computed safe-to-spend (income − |expenses|, floor at 0)
-  int get _safeToSpend => _totalBalance > 0 ? _totalBalance : 0;
 
   String _formatAmount(int value) {
     return value
@@ -191,7 +192,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredTransactions;
-    final isPositive = _totalBalance >= 0;
 
     // ★ M2: PopScope handles back button — shows exit dialog instead of closing
     return PopScope(
@@ -255,120 +255,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const SizedBox(height: 8),
 
-                  // ── Balance summary card ─────────────────────────────────
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [AppColors.primary, AppColors.bgGradientEnd],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Total Balance',
-                                    style: AppTextStyles.body.copyWith(
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '${isPositive ? '+' : '-'} UGX ${_formatAmount(_totalBalance)}',
-                                    style: TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      color: isPositive
-                                          ? Colors.white
-                                          : AppColors.errorRed,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      _miniStat(
-                                        Icons.arrow_upward,
-                                        AppColors.successGreen,
-                                        'Income',
-                                        _transactions
-                                            .where((t) => (t['amount'] as int) > 0)
-                                            .fold<int>(
-                                              0,
-                                              (s, t) => s + (t['amount'] as int),
-                                            ),
-                                      ),
-                                      const SizedBox(width: 20),
-                                      _miniStat(
-                                        Icons.arrow_downward,
-                                        AppColors.errorRed,
-                                        'Expenses',
-                                        _transactions
-                                            .where((t) => (t['amount'] as int) < 0)
-                                            .fold<int>(
-                                              0,
-                                              (s, t) =>
-                                                  s + (t['amount'] as int).abs(),
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Safe-to-spend circle
-                            Column(
-                              children: [
-                                CircleAvatar(
-                                  radius: 36,
-                                  backgroundColor: Colors.white.withValues(
-                                    alpha: 0.15,
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.shield_outlined,
-                                        color: Colors.white70,
-                                        size: 16,
-                                      ),
-                                      Text(
-                                        _formatAmount(_safeToSpend),
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Safe to\nspend',
-                                  style: AppTextStyles.body.copyWith(
-                                    fontSize: 10,
-                                    color: Colors.white60,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  // ── Smart Safe-to-Spend Card ─────────────────────────────
+                  SafeToSpendCard(refreshKey: _cardRefreshKey),
+
+                  const SizedBox(height: 12),
+
+                  // ── MoMo Wallet Balance Card (USSD) ──────────────────────
+                  MomoBalanceCard(onBalanceSaved: _refreshCard),
 
                   const SizedBox(height: 16),
 
@@ -379,12 +272,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: _quickActionButton(
                           Icons.today_outlined,
                           "Today's Plan",
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const TodaysPlanScreen(),
-                            ),
-                          ),
+                          () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TodaysPlanScreen(),
+                              ),
+                            );
+                            // Refresh safe-to-spend card on return
+                            _refreshCard();
+                          },
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -400,6 +297,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                 onTransactionsChanged: (updated) =>
                                     setState(() => _transactions = List.from(updated)),
                               ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _quickActionButton(
+                          Icons.show_chart,
+                          'Trends',
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SpendingChartScreen(),
                             ),
                           ),
                         ),
@@ -490,32 +400,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _miniStat(IconData icon, Color color, String label, int amount) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: color, size: 14),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: AppTextStyles.body.copyWith(fontSize: 11),
-            ),
-          ],
-        ),
-        Text(
-          'UGX ${_formatAmount(amount)}',
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
     );
   }
 
