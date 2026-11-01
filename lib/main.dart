@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() {
   runApp(const SmartFinanceApp());
@@ -13,7 +13,6 @@ class SmartFinanceApp extends StatelessWidget {
     return MaterialApp(
       title: 'SmartFinance AI',
       debugShowCheckedModeBanner: false,
-      // Wire the app-level theme to our custom colors
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -22,7 +21,7 @@ class SmartFinanceApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: const Color(0xFF0F172A),
       ),
-      home: const LoginScreen(),
+      home: const SplashScreen(),
     );
   }
 }
