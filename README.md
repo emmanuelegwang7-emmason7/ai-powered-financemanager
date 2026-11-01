@@ -184,7 +184,6 @@ Used on Home, Transaction History, and AI Advisor screens. Only renders widgets 
 
 ## 📸 Screenshots
 
-*(Add screenshots after building. Replace the paths below with your actual image files.)*
 
 ![Home Screen](assets/screenshots/m2_home.png)
 *Figure 1: Home Dashboard showing balance summary, quick actions, and the dynamic transaction list.*
